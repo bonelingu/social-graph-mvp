@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase-client";
 import Graph from "./graph";
-import PersonSearchSelect from "./PersonSearchSelect";
+import PersonSearchSelect from "./person-search-select";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
@@ -17,7 +17,7 @@ export default function Home() {
 
   const [from, setFrom] = useState<any>(null);
   const [to, setTo] = useState<any>(null);
-  const [relationLabel, setRelationLabel] = useState("");
+  const [label, setLabel] = useState("");
 
   useEffect(() => {
     init();
@@ -51,17 +51,21 @@ export default function Home() {
     setRelations(data || []);
   }
 
-  // =====================
-  // PEOPLE INLINE EDIT
-  // =====================
+  // =========================
+  // PEOPLE EDIT (inline)
+  // =========================
 
   async function updatePerson(id: string, field: string, value: any) {
+    setPeople((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, [field]: value } : p
+      )
+    );
+
     await supabase
       .from("people")
       .update({ [field]: value })
       .eq("id", id);
-
-    if (user?.id) fetchPeople(user.id);
   }
 
   async function addPerson() {
@@ -88,9 +92,9 @@ export default function Home() {
     fetchPeople(user.id);
   }
 
-  // =====================
-  // RELATION
-  // =====================
+  // =========================
+  // RELATIONS
+  // =========================
 
   async function createRelation() {
     if (!from || !to) return;
@@ -100,122 +104,105 @@ export default function Home() {
         owner_id: user.id,
         from_id: from.id,
         to_id: to.id,
-        label: relationLabel || "related",
+        label: label || "related",
       },
     ]);
 
     setFrom(null);
     setTo(null);
-    setRelationLabel("");
+    setLabel("");
 
     fetchRelations(user.id);
   }
 
-  async function updateRelationLabel(id: string, value: string) {
-    await supabase
-      .from("relations")
-      .update({ label: value })
-      .eq("id", id);
-
-    fetchRelations(user.id);
-  }
-
-  if (!user) {
-    return <div style={{ padding: 40 }}>Login required</div>;
-  }
+  if (!user) return <div style={{ padding: 40 }}>login required</div>;
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>Social Graph Pro</h1>
+      <h1>social graph</h1>
 
       {/* GRAPH */}
-      <h2>Graph</h2>
+      <h2>graph</h2>
       <Graph people={people} relations={relations} />
 
       <hr />
 
-      {/* CREATE PERSON */}
-      <h2>Add Person</h2>
+      {/* ADD PERSON */}
+      <h2>add person</h2>
 
-      <input placeholder="name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="name" />
       <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />
-      <input placeholder="tag" value={tag} onChange={(e) => setTag(e.target.value)} />
-      <input placeholder="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="tag" />
+      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="notes" />
 
-      <button onClick={addPerson}>Add</button>
+      <button onClick={addPerson}>add</button>
 
       <hr />
 
       {/* PEOPLE INLINE EDIT */}
-      <h2>People (Inline Editable)</h2>
+      <h2>people (editable)</h2>
 
       {people.map((p) => (
         <div key={p.id} style={{ border: "1px solid #ccc", padding: 10 }}>
           <input
             value={p.name}
-            onChange={(e) => updatePerson(p.id, "name", e.target.value)}
+            onChange={(e) =>
+              updatePerson(p.id, "name", e.target.value)
+            }
           />
 
           <input
             type="date"
             value={p.birthday || ""}
-            onChange={(e) => updatePerson(p.id, "birthday", e.target.value)}
+            onChange={(e) =>
+              updatePerson(p.id, "birthday", e.target.value)
+            }
           />
 
           <input
             value={p.relationship_tag || ""}
-            onChange={(e) => updatePerson(p.id, "relationship_tag", e.target.value)}
+            onChange={(e) =>
+              updatePerson(p.id, "relationship_tag", e.target.value)
+            }
           />
 
           <textarea
             value={p.notes || ""}
-            onChange={(e) => updatePerson(p.id, "notes", e.target.value)}
+            onChange={(e) =>
+              updatePerson(p.id, "notes", e.target.value)
+            }
           />
 
-          <button onClick={() => deletePerson(p.id)}>Delete</button>
+          <button onClick={() => deletePerson(p.id)}>
+            delete
+          </button>
         </div>
       ))}
 
       <hr />
 
-      {/* RELATION SEARCH */}
-      <h2>Create Relation</h2>
+      {/* RELATION */}
+      <h2>create relation</h2>
 
       <div style={{ display: "flex", gap: 20 }}>
         <div>
-          <p>From: {from?.name || "-"}</p>
+          <p>from: {from?.name}</p>
           <PersonSearchSelect people={people} onSelect={setFrom} />
         </div>
 
         <div>
-          <p>To: {to?.name || "-"}</p>
+          <p>to: {to?.name}</p>
           <PersonSearchSelect people={people} onSelect={setTo} />
         </div>
       </div>
 
       <input
-        placeholder="relation label"
-        value={relationLabel}
-        onChange={(e) => setRelationLabel(e.target.value)}
+        placeholder="label"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
       />
 
-      <button onClick={createRelation}>Create Relation</button>
-
-      <hr />
-
-      {/* RELATIONS LIST */}
-      <h2>Relations</h2>
-
-      {relations.map((r) => (
-        <div key={r.id}>
-          <span>{r.from_id} → {r.to_id}</span>
-
-          <input
-            value={r.label || ""}
-            onChange={(e) => updateRelationLabel(r.id, e.target.value)}
-          />
-        </div>
-      ))}
+      <button onClick={createRelation}>create relation</button>
     </div>
   );
 }
