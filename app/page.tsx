@@ -1,7 +1,7 @@
 "use client";
 
-import Auth from "@/app/Auth";
-import Graph from "@/app/Graph";
+import Auth from "@/components/Auth";
+import Graph from "@/components/graph";
 import { useAuth } from "@/hooks/useAuth";
 import { usePeople } from "@/hooks/usePeople";
 import { useRelations } from "@/hooks/useRelations";
