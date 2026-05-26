@@ -21,10 +21,7 @@ export default function Graph({
 }: any) {
   const nodesInit = people.map((p: any) => ({
     id: p.id,
-    position: {
-      x: p.pos_x || 100,
-      y: p.pos_y || 100,
-    },
+    position: { x: p.pos_x || 100, y: p.pos_y || 100 },
     data: { label: p.name },
   }));
 
@@ -41,7 +38,6 @@ export default function Graph({
   const [edges, setEdges, onEdgesChange] =
     useEdgesState(edgesInit);
 
-  // 🔥 关键修复：必须同步更新
   useEffect(() => {
     setNodes(nodesInit);
     setEdges(edgesInit);
@@ -60,9 +56,7 @@ export default function Graph({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(e, node) =>
-          onNodeClick(node.id)
-        }
+        onNodeClick={(e, node) => onNodeClick(node.id)}
         onNodeDragStop={(e, node) =>
           onNodePositionChange(
             node.id,

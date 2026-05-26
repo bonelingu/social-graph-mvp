@@ -6,17 +6,15 @@ import Graph from "./graph";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-
   const [people, setPeople] = useState<any[]>([]);
   const [relations, setRelations] = useState<any[]>([]);
-
   const [selected, setSelected] = useState<any>(null);
 
-  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
-  // ========================
-  // 🔐 登录系统（完整恢复）
-  // ========================
+  // =========================
+  // 🔐 AUTH SYSTEM
+  // =========================
   useEffect(() => {
     initAuth();
   }, []);
@@ -41,12 +39,10 @@ export default function Home() {
     });
   }
 
-  // ========================
-  // 📦 数据加载（关键修复）
-  // ========================
+  // =========================
+  // 📦 LOAD DATA
+  // =========================
   async function loadData(uid: string) {
-    setLoading(true);
-
     const { data: p } = await supabase
       .from("people")
       .select("*")
@@ -59,13 +55,11 @@ export default function Home() {
 
     setPeople(p || []);
     setRelations(r || []);
-
-    setLoading(false);
   }
 
-  // ========================
-  // ➕ 添加人物
-  // ========================
+  // =========================
+  // ➕ ADD PERSON
+  // =========================
   async function addPerson() {
     if (!user) return;
 
@@ -74,40 +68,52 @@ export default function Home() {
         owner_id: user.id,
         name: "新人物",
         relationship_tag: "朋友",
-        pos_x: Math.random() * 400,
-        pos_y: Math.random() * 400,
+        notes: "",
+        pos_x: Math.random() * 500,
+        pos_y: Math.random() * 500,
       },
     ]);
 
     loadData(user.id);
   }
 
-  // ========================
-  // ✏️ 更新人物
-  // ========================
+  // =========================
+  // ✏️ UPDATE PERSON
+  // =========================
   async function updatePerson(p: any) {
     await supabase
       .from("people")
       .update({
         name: p.name,
-        relationship_tag: p.relationship_tag,
         notes: p.notes,
+        relationship_tag: p.relationship_tag,
       })
       .eq("id", p.id);
 
     loadData(user.id);
   }
 
-  // ========================
-  // 🔗 添加关系
-  // ========================
-  async function addRelation(a: string, b: string) {
+  // =========================
+  // 🔗 SEARCH + ADD RELATION（重点）
+  // =========================
+  async function addRelation(from: string, to: string) {
+    if (!user) return;
+
+    // 防重复
+    const exists = relations.find(
+      (r) =>
+        r.from_person_id === from &&
+        r.to_person_id === to
+    );
+
+    if (exists) return;
+
     await supabase.from("relations").insert([
       {
         owner_id: user.id,
-        from_person_id: a,
-        to_person_id: b,
-        relation_type: "认识",
+        from_person_id: from,
+        to_person_id: to,
+        relation_type: "关系",
         strength: 1,
       },
     ]);
@@ -115,10 +121,10 @@ export default function Home() {
     loadData(user.id);
   }
 
-  // ========================
-  // 📍 保存位置
-  // ========================
-  async function savePosition(id: string, x: number, y: number) {
+  // =========================
+  // 📍 UPDATE POSITION
+  // =========================
+  async function updatePosition(id: string, x: number, y: number) {
     await supabase
       .from("people")
       .update({
@@ -128,58 +134,70 @@ export default function Home() {
       .eq("id", id);
   }
 
-  // ========================
-  // 🔐 未登录
-  // ========================
+  // =========================
+  // 🔍 SEARCH PEOPLE
+  // =========================
+  const filteredPeople = people.filter((p) =>
+    p.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // =========================
+  // 🔐 LOGIN UI
+  // =========================
   if (!user) {
     return (
       <div style={{ padding: 40 }}>
-        <h2>请登录</h2>
+        <h2>登录后进入社交图谱</h2>
       </div>
     );
   }
 
+  // =========================
+  // 🧠 MAIN UI
+  // =========================
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-      {/* 左侧 */}
-      <div style={{ width: 280, padding: 20 }}>
+      {/* LEFT PANEL */}
+      <div style={{ width: 300, padding: 10 }}>
         <h3>人物</h3>
 
-        {loading && <p>加载中...</p>}
+        <input
+          placeholder="搜索人物"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
-        {people.map((p) => (
+        <button onClick={addPerson}>+ 新增人物</button>
+
+        {filteredPeople.map((p) => (
           <div
             key={p.id}
             onClick={() => setSelected(p)}
-            style={{ padding: 8, cursor: "pointer" }}
+            style={{ padding: 6, cursor: "pointer" }}
           >
             {p.name}
           </div>
         ))}
-
-        <button onClick={addPerson}>+ 添加</button>
       </div>
 
-      {/* 中间 Graph */}
+      {/* CENTER GRAPH */}
       <div style={{ flex: 1 }}>
         <Graph
           people={people}
           relations={relations}
           onNodeClick={(id: string) => {
-            setSelected(
-              people.find((p) => p.id === id)
-            );
+            setSelected(people.find((p) => p.id === id));
           }}
           onConnectRelation={addRelation}
-          onNodePositionChange={savePosition}
+          onNodePositionChange={updatePosition}
         />
       </div>
 
-      {/* 右侧 */}
-      <div style={{ width: 300, padding: 20 }}>
+      {/* RIGHT EDITOR */}
+      <div style={{ width: 320, padding: 10 }}>
         {selected ? (
           <>
-            <h3>{selected.name}</h3>
+            <h3>编辑人物</h3>
 
             <input
               value={selected.name}
@@ -201,12 +219,22 @@ export default function Home() {
               }
             />
 
+            <input
+              value={selected.relationship_tag}
+              onChange={(e) =>
+                setSelected({
+                  ...selected,
+                  relationship_tag: e.target.value,
+                })
+              }
+            />
+
             <button onClick={() => updatePerson(selected)}>
               保存
             </button>
           </>
         ) : (
-          <p>点击节点</p>
+          <p>点击节点编辑</p>
         )}
       </div>
     </div>
