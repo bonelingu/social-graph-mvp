@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase-client";
+import { supabase } from "../lib/supabase-client";
 import Graph from "./graph";
 import PersonSearchSelect from "./person-search-select";
 
