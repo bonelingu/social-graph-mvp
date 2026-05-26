@@ -1,205 +1,309 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-import dynamic from "next/dynamic";
-
-const ForceGraph2D = dynamic(
-  () => import("react-force-graph-2d").then(m => m.default),
-  { ssr: false }
-);
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-
+  const [people, setPeople] = useState<any[]>([]);
   const [relations, setRelations] = useState<any[]>([]);
 
-  // ======================
-  // AUTH
-  // ======================
-  const signUp = async () => {
+  const [name, setName] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const [tag, setTag] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [fromId, setFromId] = useState("");
+  const [toId, setToId] = useState("");
+  const [relationType, setRelationType] = useState("");
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  async function checkUser() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    setUser(user);
+
+    if (user) {
+      fetchPeople(user.id);
+      fetchRelations(user.id);
+    }
+  }
+
+  async function signIn() {
+    const email = prompt("Email");
+    const password = prompt("Password");
+
+    if (!email || !password) return;
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      location.reload();
+    }
+  }
+
+  async function signUp() {
+    const email = prompt("Email");
+    const password = prompt("Password");
+
+    if (!email || !password) return;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) alert(error.message);
-    else alert("Check your email to confirm login");
-  };
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Signup success");
+    }
+  }
 
-  const signIn = async () => {
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    if (error) return alert(error.message);
-
-    setUser(data.user);
-    loadData(data.user.id);
-  };
-
-  const logout = async () => {
+  async function logout() {
     await supabase.auth.signOut();
-    setUser(null);
-    setRelations([]);
-  };
+    location.reload();
+  }
 
-  // ======================
-  // LOAD DATA (IMPORTANT)
-  // ======================
-  const loadData = async (uid: string) => {
-    const { data, error } = await supabase
+  async function fetchPeople(userId: string) {
+    const { data } = await supabase
+      .from("people")
+      .select("*")
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: false });
+
+    setPeople(data || []);
+  }
+
+  async function fetchRelations(userId: string) {
+    const { data } = await supabase
       .from("relations")
       .select("*")
-      .eq("user_id", uid);
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: false });
 
-    if (error) console.log(error);
     setRelations(data || []);
-  };
+  }
 
-  // ======================
-  // INIT SESSION
-  // ======================
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser(data.user);
-        loadData(data.user.id);
-      }
-    });
-  }, []);
+  async function addPerson() {
+    if (!user) return alert("Please login");
 
-  // ======================
-  // ADD RELATION
-  // ======================
-  const addRelation = async () => {
-    if (!user) return;
-    if (!from || !to) return;
-
-    const { error } = await supabase.from("relations").insert([
+    const { error } = await supabase.from("people").insert([
       {
-        user_id: user.id,
-        from_name: from,
-        to_name: to,
+        owner_id: user.id,
+        name,
+        birthday,
+        relationship_tag: tag,
+        notes,
       },
     ]);
 
     if (error) {
       alert(error.message);
     } else {
-      setFrom("");
-      setTo("");
-      loadData(user.id);
+      setName("");
+      setBirthday("");
+      setTag("");
+      setNotes("");
+
+      fetchPeople(user.id);
     }
-  };
+  }
 
-  // ======================
-  // DELETE
-  // ======================
-  const remove = async (id: string) => {
-    const { error } = await supabase
-      .from("relations")
-      .delete()
-      .eq("id", id);
+  async function deletePerson(id: string) {
+    await supabase.from("people").delete().eq("id", id);
 
-    if (!error && user) {
-      loadData(user.id);
+    fetchPeople(user.id);
+  }
+
+  async function addRelation() {
+    if (!fromId || !toId) return;
+
+    const { error } = await supabase.from("relations").insert([
+      {
+        owner_id: user.id,
+        from_person_id: fromId,
+        to_person_id: toId,
+        relation_type: relationType,
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+    } else {
+      fetchRelations(user.id);
     }
-  };
+  }
 
-  // ======================
-  // GRAPH DATA
-  // ======================
-  const graphData = {
-    nodes: Array.from(
-      new Set(relations.flatMap(r => [r.from_name, r.to_name]))
-    ).map(name => ({ id: name })),
+  async function deleteRelation(id: string) {
+    await supabase.from("relations").delete().eq("id", id);
 
-    links: relations.map(r => ({
-      source: r.from_name,
-      target: r.to_name,
-    })),
-  };
+    fetchRelations(user.id);
+  }
 
-  // ======================
-  // LOGIN PAGE
-  // ======================
   if (!user) {
     return (
       <div style={{ padding: 40 }}>
-        <h1>Login</h1>
+        <h1>Social Graph</h1>
 
-        <input
-          placeholder="email"
-          onChange={e => setEmail(e.target.value)}
-        />
-
-        <input
-          placeholder="password"
-          type="password"
-          onChange={e => setPassword(e.target.value)}
-        />
-
-        <button onClick={signUp}>Sign Up</button>
         <button onClick={signIn}>Login</button>
+
+        <button onClick={signUp} style={{ marginLeft: 10 }}>
+          Signup
+        </button>
       </div>
     );
   }
 
-  // ======================
-  // MAIN APP
-  // ======================
   return (
     <div style={{ padding: 40 }}>
-      <h1>Social Graph 🚀</h1>
-
-      <p>Logged in: {user.email}</p>
+      <h1>Social Graph CRM</h1>
 
       <button onClick={logout}>Logout</button>
 
       <hr />
 
-      <h2>Add Relation</h2>
+      <h2>Add Person</h2>
 
       <input
-        placeholder="From (Alice)"
-        value={from}
-        onChange={e => setFrom(e.target.value)}
+        placeholder="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
       />
+
+      <br />
+      <br />
 
       <input
-        placeholder="To (Bob)"
-        value={to}
-        onChange={e => setTo(e.target.value)}
+        type="date"
+        value={birthday}
+        onChange={(e) => setBirthday(e.target.value)}
       />
 
-      <button onClick={addRelation}>Add</button>
+      <br />
+      <br />
 
-      <h2>My Graph</h2>
+      <input
+        placeholder="Tag (friend/work/classmate)"
+        value={tag}
+        onChange={(e) => setTag(e.target.value)}
+      />
 
-      {relations.map(r => (
-        <div key={r.id}>
-          {r.from_name} → {r.to_name}
-          <button onClick={() => remove(r.id)}>Delete</button>
+      <br />
+      <br />
+
+      <textarea
+        placeholder="Notes"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+      />
+
+      <br />
+      <br />
+
+      <button onClick={addPerson}>Add Person</button>
+
+      <hr />
+
+      <h2>People</h2>
+
+      {people.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            border: "1px solid gray",
+            padding: 10,
+            marginBottom: 10,
+          }}
+        >
+          <strong>{p.name}</strong>
+
+          <p>Tag: {p.relationship_tag}</p>
+
+          <p>Birthday: {p.birthday}</p>
+
+          <p>Notes: {p.notes}</p>
+
+          <button onClick={() => deletePerson(p.id)}>Delete</button>
         </div>
       ))}
 
-      <h2>Graph View</h2>
+      <hr />
 
-      <div style={{ height: 600 }}>
-        <ForceGraph2D
-          graphData={graphData}
-          nodeLabel="id"
-        />
-      </div>
+      <h2>Add Relation</h2>
+
+      <select onChange={(e) => setFromId(e.target.value)}>
+        <option>From</option>
+
+        {people.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+
+      <br />
+      <br />
+
+      <select onChange={(e) => setToId(e.target.value)}>
+        <option>To</option>
+
+        {people.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+
+      <br />
+      <br />
+
+      <input
+        placeholder="Relation Type"
+        value={relationType}
+        onChange={(e) => setRelationType(e.target.value)}
+      />
+
+      <br />
+      <br />
+
+      <button onClick={addRelation}>Add Relation</button>
+
+      <hr />
+
+      <h2>Relations</h2>
+
+      {relations.map((r) => (
+        <div
+          key={r.id}
+          style={{
+            border: "1px solid blue",
+            padding: 10,
+            marginBottom: 10,
+          }}
+        >
+          <p>Relation Type: {r.relation_type}</p>
+
+          <p>From: {r.from_person_id}</p>
+
+          <p>To: {r.to_person_id}</p>
+
+          <button onClick={() => deleteRelation(r.id)}>
+            Delete Relation
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
