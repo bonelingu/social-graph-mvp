@@ -1,7 +1,7 @@
 "use client";
 
-import ReactFlow, { Background } from "reactflow";
-import "reactflow/dist/style.css";
+import ReactFlow, { Background } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 
 export default function Graph({ people, relations }: any) {
   const nodes = people.map((p: any, i: number) => ({
@@ -21,7 +21,7 @@ export default function Graph({ people, relations }: any) {
   }));
 
   return (
-    <div style={{ height: 450, border: "1px solid #ddd" }}>
+    <div style={{ height: 500, width: "100%" }}>
       <ReactFlow nodes={nodes} edges={edges} fitView>
         <Background />
       </ReactFlow>
