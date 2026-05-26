@@ -15,8 +15,8 @@ import { useEffect } from "react";
 export default function Graph({
   people,
   relations,
-  onNodeClick,
   onConnectRelation,
+  onUpdateRelation,
   onNodePositionChange,
 }: any) {
   const nodesInit = people.map((p: any) => ({
@@ -48,15 +48,20 @@ export default function Graph({
     onConnectRelation(params.source, params.target);
   };
 
+  const onEdgeDoubleClick = (_: any, edge: any) => {
+    const value = prompt("修改关系", edge.label);
+    if (value) onUpdateRelation(edge.id, value);
+  };
+
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ height: "100%" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(e, node) => onNodeClick(node.id)}
+        onEdgeDoubleClick={onEdgeDoubleClick}
         onNodeDragStop={(e, node) =>
           onNodePositionChange(
             node.id,
