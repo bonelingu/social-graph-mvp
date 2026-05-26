@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Graph from "./Graph";
+import Graph from "./graph";
 import PersonSearchSelect from "./PersonSearchSelect";
 
 export default function Home() {
