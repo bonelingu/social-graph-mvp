@@ -10,6 +10,7 @@ import ReactFlow, {
 } from "reactflow";
 
 import "reactflow/dist/style.css";
+import { useEffect } from "react";
 
 export default function Graph({
   people,
@@ -34,8 +35,17 @@ export default function Graph({
     label: r.relation_type,
   }));
 
-  const [nodes, , onNodesChange] = useNodesState(nodesInit);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(edgesInit);
+  const [nodes, setNodes, onNodesChange] =
+    useNodesState(nodesInit);
+
+  const [edges, setEdges, onEdgesChange] =
+    useEdgesState(edgesInit);
+
+  // 🔥 关键修复：必须同步更新
+  useEffect(() => {
+    setNodes(nodesInit);
+    setEdges(edgesInit);
+  }, [people, relations]);
 
   const onConnect = (params: any) => {
     setEdges((eds) => addEdge(params, eds));
@@ -50,9 +60,15 @@ export default function Graph({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(e, node) => onNodeClick(node.id)}
+        onNodeClick={(e, node) =>
+          onNodeClick(node.id)
+        }
         onNodeDragStop={(e, node) =>
-          onNodePositionChange(node.id, node.position.x, node.position.y)
+          onNodePositionChange(
+            node.id,
+            node.position.x,
+            node.position.y
+          )
         }
         fitView
       >

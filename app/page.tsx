@@ -12,16 +12,16 @@ export default function Home() {
 
   const [selected, setSelected] = useState<any>(null);
 
-  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // =========================
-  // 登录系统
-  // =========================
+  // ========================
+  // 🔐 登录系统（完整恢复）
+  // ========================
   useEffect(() => {
-    init();
+    initAuth();
   }, []);
 
-  async function init() {
+  async function initAuth() {
     const { data } = await supabase.auth.getSession();
     const u = data.session?.user ?? null;
 
@@ -34,13 +34,19 @@ export default function Home() {
       setUser(u2);
 
       if (u2) loadData(u2.id);
+      else {
+        setPeople([]);
+        setRelations([]);
+      }
     });
   }
 
-  // =========================
-  // 加载数据
-  // =========================
+  // ========================
+  // 📦 数据加载（关键修复）
+  // ========================
   async function loadData(uid: string) {
+    setLoading(true);
+
     const { data: p } = await supabase
       .from("people")
       .select("*")
@@ -53,31 +59,32 @@ export default function Home() {
 
     setPeople(p || []);
     setRelations(r || []);
+
+    setLoading(false);
   }
 
-  // =========================
-  // 添加人物
-  // =========================
+  // ========================
+  // ➕ 添加人物
+  // ========================
   async function addPerson() {
-    if (!user || !name) return;
+    if (!user) return;
 
     await supabase.from("people").insert([
       {
         owner_id: user.id,
-        name,
+        name: "新人物",
         relationship_tag: "朋友",
         pos_x: Math.random() * 400,
         pos_y: Math.random() * 400,
       },
     ]);
 
-    setName("");
     loadData(user.id);
   }
 
-  // =========================
-  // 更新人物
-  // =========================
+  // ========================
+  // ✏️ 更新人物
+  // ========================
   async function updatePerson(p: any) {
     await supabase
       .from("people")
@@ -91,17 +98,15 @@ export default function Home() {
     loadData(user.id);
   }
 
-  // =========================
-  // 添加关系
-  // =========================
-  async function addRelation(from: string, to: string) {
-    if (!user) return;
-
+  // ========================
+  // 🔗 添加关系
+  // ========================
+  async function addRelation(a: string, b: string) {
     await supabase.from("relations").insert([
       {
         owner_id: user.id,
-        from_person_id: from,
-        to_person_id: to,
+        from_person_id: a,
+        to_person_id: b,
         relation_type: "认识",
         strength: 1,
       },
@@ -110,23 +115,26 @@ export default function Home() {
     loadData(user.id);
   }
 
-  // =========================
-  // 保存位置
-  // =========================
-  async function updatePosition(id: string, x: number, y: number) {
+  // ========================
+  // 📍 保存位置
+  // ========================
+  async function savePosition(id: string, x: number, y: number) {
     await supabase
       .from("people")
-      .update({ pos_x: x, pos_y: y })
+      .update({
+        pos_x: x,
+        pos_y: y,
+      })
       .eq("id", id);
   }
 
-  // =========================
-  // 未登录
-  // =========================
+  // ========================
+  // 🔐 未登录
+  // ========================
   if (!user) {
     return (
       <div style={{ padding: 40 }}>
-        <h2>请先登录 Supabase</h2>
+        <h2>请登录</h2>
       </div>
     );
   }
@@ -135,35 +143,35 @@ export default function Home() {
     <div style={{ display: "flex", height: "100vh" }}>
       {/* 左侧 */}
       <div style={{ width: 280, padding: 20 }}>
-        <h3>添加人物</h3>
+        <h3>人物</h3>
 
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="姓名"
-        />
-
-        <button onClick={addPerson}>添加</button>
-
-        <hr />
+        {loading && <p>加载中...</p>}
 
         {people.map((p) => (
-          <div key={p.id} onClick={() => setSelected(p)}>
+          <div
+            key={p.id}
+            onClick={() => setSelected(p)}
+            style={{ padding: 8, cursor: "pointer" }}
+          >
             {p.name}
           </div>
         ))}
+
+        <button onClick={addPerson}>+ 添加</button>
       </div>
 
-      {/* 中间图谱 */}
+      {/* 中间 Graph */}
       <div style={{ flex: 1 }}>
         <Graph
           people={people}
           relations={relations}
           onNodeClick={(id: string) => {
-            setSelected(people.find((p) => p.id === id));
+            setSelected(
+              people.find((p) => p.id === id)
+            );
           }}
           onConnectRelation={addRelation}
-          onNodePositionChange={updatePosition}
+          onNodePositionChange={savePosition}
         />
       </div>
 
@@ -176,14 +184,20 @@ export default function Home() {
             <input
               value={selected.name}
               onChange={(e) =>
-                setSelected({ ...selected, name: e.target.value })
+                setSelected({
+                  ...selected,
+                  name: e.target.value,
+                })
               }
             />
 
             <textarea
               value={selected.notes || ""}
               onChange={(e) =>
-                setSelected({ ...selected, notes: e.target.value })
+                setSelected({
+                  ...selected,
+                  notes: e.target.value,
+                })
               }
             />
 
@@ -192,7 +206,7 @@ export default function Home() {
             </button>
           </>
         ) : (
-          <p>点击节点查看</p>
+          <p>点击节点</p>
         )}
       </div>
     </div>
