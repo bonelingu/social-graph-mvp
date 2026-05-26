@@ -1,6 +1,6 @@
 "use client";
 
-import ReactFlow, { Background } from "reactflow";
+import ReactFlow, { Background, Edge } from "reactflow";
 import "reactflow/dist/style.css";
 
 export default function Graph({ people, relations }: any) {
@@ -13,15 +13,25 @@ export default function Graph({ people, relations }: any) {
     },
   }));
 
-  const edges = relations.map((r: any) => ({
-    id: r.id,
+  // ⭐ 支持同一对人多条关系（关键）
+  const edges: Edge[] = relations.map((r: any, index: number) => ({
+    id: r.id || `${r.from_id}-${r.to_id}-${index}`,
     source: r.from_id,
     target: r.to_id,
-    label: r.label,
+    label: r.type,
+    animated: r.type === "close_friend",
+    style: {
+      stroke:
+        r.type === "friend"
+          ? "#3b82f6"
+          : r.type === "classmate"
+          ? "#22c55e"
+          : "#94a3b8",
+    },
   }));
 
   return (
-    <div style={{ height: 500 }}>
+    <div style={{ height: 600, width: "100%" }}>
       <ReactFlow nodes={nodes} edges={edges} fitView>
         <Background />
       </ReactFlow>
