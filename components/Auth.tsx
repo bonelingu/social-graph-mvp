@@ -1,36 +1,71 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
 import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function Auth({ onLogin }: any) {
+export default function Auth() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   async function login() {
-    const { data, error } =
+    const { error } =
       await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-    if (data?.user) onLogin(data.user);
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+    }
+  }
+
+  async function signup() {
+    const { error } =
+      await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("注册成功");
+    }
   }
 
   return (
-    <div>
+    <div style={{ padding: 40 }}>
+      <h2>Social Graph 登录</h2>
+
       <input
-        placeholder="email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="password"
-        onChange={(e) => setPassword(e.target.value)}
+        placeholder="邮箱"
+        onChange={(e) =>
+          setEmail(e.target.value)
+        }
       />
 
-      <button onClick={login}>登录</button>
+      <br />
+      <br />
+
+      <input
+        type="password"
+        placeholder="密码"
+        onChange={(e) =>
+          setPassword(e.target.value)
+        }
+      />
+
+      <br />
+      <br />
+
+      <button onClick={login}>
+        登录
+      </button>
+
+      <button onClick={signup}>
+        注册
+      </button>
     </div>
   );
 }
