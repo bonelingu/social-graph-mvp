@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+
 import { supabase } from "@/lib/supabaseClient";
 
-export function useRelations(userId: string | null) {
-  const [relations, setRelations] = useState<any[]>([]);
+export function useRelations(userId: string) {
+  const [relations, setRelations] =
+    useState<any[]>([]);
 
+  // =========================
+  // load
+  // =========================
   async function load() {
-    if (!userId) return;
-
     const { data } = await supabase
       .from("relations")
       .select("*")
@@ -17,10 +20,31 @@ export function useRelations(userId: string | null) {
     setRelations(data || []);
   }
 
-  async function addRelation(from: string, to: string) {
-    if (!userId) return;
+  // =========================
+  // add
+  // =========================
+  async function addRelation(
+    from: string,
+    to: string
+  ) {
+    // 避免自己连自己
+    if (from === to) return;
 
-    const { data } = await supabase
+    // 避免重复关系
+    const exists = relations.find(
+      (r) =>
+        (r.from_person_id === from &&
+          r.to_person_id === to) ||
+        (r.from_person_id === to &&
+          r.to_person_id === from)
+    );
+
+    if (exists) {
+      alert("关系已存在");
+      return;
+    }
+
+    await supabase
       .from("relations")
       .insert([
         {
@@ -29,21 +53,47 @@ export function useRelations(userId: string | null) {
           to_person_id: to,
           relation_type: "关系",
         },
-      ])
-      .select()
-      .single();
+      ]);
 
-    setRelations((prev) => [...prev, data]);
+    await load();
   }
 
-  async function updateRelation(id: string, type: string) {
+  // =========================
+  // update
+  // =========================
+  async function updateRelation(
+    id: string,
+    type: string
+  ) {
     await supabase
       .from("relations")
-      .update({ relation_type: type })
+      .update({
+        relation_type: type,
+      })
       .eq("id", id);
 
-    load();
+    await load();
   }
 
-  return { relations, load, addRelation, updateRelation };
+  // =========================
+  // delete
+  // =========================
+  async function deleteRelation(
+    id: string
+  ) {
+    await supabase
+      .from("relations")
+      .delete()
+      .eq("id", id);
+
+    await load();
+  }
+
+  return {
+    relations,
+    load,
+    addRelation,
+    updateRelation,
+    deleteRelation,
+  };
 }

@@ -6,7 +6,6 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  addEdge,
   useNodesState,
   useEdgesState,
 } from "reactflow";
@@ -16,14 +15,19 @@ import "reactflow/dist/style.css";
 export default function Graph({
   people,
   relations,
+
   onConnectRelation,
+
   onUpdateRelation,
+
   onDeleteRelation,
+
   onSelectPerson,
 }: any) {
   // =========================
-  // 自动聚类（按标签）
+  // 自动聚类
   // =========================
+
   const groupX: any = {
     朋友: 100,
     同学: 500,
@@ -32,62 +36,68 @@ export default function Graph({
   };
 
   // =========================
-  // Nodes
+  // nodes
   // =========================
+
   const nodesInit = useMemo(() => {
-    return people.map((p: any, index: number) => ({
-      id: p.id,
+    return people.map(
+      (p: any, index: number) => ({
+        id: p.id,
 
-      position: {
-        x:
-          p.pos_x ??
-          (groupX[p.relationship_tag] || 300),
+        position: {
+          x:
+            p.pos_x ??
+            (groupX[
+              p.relationship_tag
+            ] || 300),
 
-        y:
-          p.pos_y ??
-          100 + (index % 8) * 120,
-      },
+          y:
+            p.pos_y ??
+            100 +
+              (index % 10) * 100,
+        },
 
-      data: {
-        label: (
-          <div
-            style={{
-              padding: 6,
-              minWidth: 120,
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 700,
-              }}
-            >
-              {p.name}
+        data: {
+          label: (
+            <div>
+              <div
+                style={{
+                  fontWeight: 700,
+                }}
+              >
+                {p.name}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                }}
+              >
+                {p.relationship_tag}
+              </div>
             </div>
+          ),
+        },
 
-            <div
-              style={{
-                fontSize: 12,
-                color: "#666",
-              }}
-            >
-              {p.relationship_tag || "未分类"}
-            </div>
-          </div>
-        ),
-      },
+        style: {
+          border:
+            "1px solid #ddd",
 
-      style: {
-        borderRadius: 12,
-        border: "1px solid #ddd",
-        padding: 10,
-        background: "white",
-      },
-    }));
+          borderRadius: 10,
+
+          padding: 10,
+
+          background: "white",
+        },
+      })
+    );
   }, [people]);
 
   // =========================
-  // Edges
+  // edges
   // =========================
+
   const edgesInit = useMemo(() => {
     return relations.map((r: any) => ({
       id: r.id,
@@ -109,8 +119,9 @@ export default function Graph({
     useEdgesState(edgesInit);
 
   // =========================
-  // 同步数据
+  // sync
   // =========================
+
   useEffect(() => {
     setNodes(nodesInit);
   }, [nodesInit]);
@@ -120,9 +131,12 @@ export default function Graph({
   }, [edgesInit]);
 
   // =========================
-  // 创建关系
+  // connect
   // =========================
-  const onConnect = async (params: any) => {
+
+  const onConnect = async (
+    params: any
+  ) => {
     await onConnectRelation(
       params.source,
       params.target
@@ -130,8 +144,9 @@ export default function Graph({
   };
 
   // =========================
-  // 双击编辑关系
+  // edit relation
   // =========================
+
   const onEdgeDoubleClick = (
     _: any,
     edge: any
@@ -142,13 +157,17 @@ export default function Graph({
     );
 
     if (value) {
-      onUpdateRelation(edge.id, value);
+      onUpdateRelation(
+        edge.id,
+        value
+      );
     }
   };
 
   // =========================
-  // 删除关系
+  // delete relation
   // =========================
+
   const onEdgeContextMenu = (
     e: any,
     edge: any
@@ -156,7 +175,7 @@ export default function Graph({
     e.preventDefault();
 
     const ok = confirm(
-      "删除这条关系？"
+      "删除关系？"
     );
 
     if (ok) {
@@ -165,9 +184,10 @@ export default function Graph({
   };
 
   // =========================
-  // 点击人物
+  // click node
   // =========================
-  const handleNodeClick = (
+
+  const onNodeClick = (
     _: any,
     node: any
   ) => {
@@ -187,21 +207,35 @@ export default function Graph({
     >
       <ReactFlow
         nodes={nodes}
+
         edges={edges}
+
         fitView
+
         onConnect={onConnect}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
+
+        onNodesChange={
+          onNodesChange
+        }
+
+        onEdgesChange={
+          onEdgesChange
+        }
+
+        onNodeClick={onNodeClick}
+
         onEdgeDoubleClick={
           onEdgeDoubleClick
         }
+
         onEdgeContextMenu={
           onEdgeContextMenu
         }
       >
         <MiniMap />
+
         <Controls />
+
         <Background />
       </ReactFlow>
     </div>
